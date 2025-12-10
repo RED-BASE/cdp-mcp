@@ -1,0 +1,34 @@
+{
+  "name": "cdp-mcp",
+  "version": "0.1.0",
+  "description": "Chrome DevTools Protocol MCP server for browser automation",
+  "main": "dist/index.js",
+  "bin": {
+    "cdp-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "chrome",
+    "cdp",
+    "browser",
+    "automation",
+    "devtools"
+  ],
+  "author": "Cassius Oldenburg",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.2",
+    "ts-node": "^10.9.2"
+  }
+}
