@@ -58,6 +58,7 @@ Then either:
 | `cdp_click_coordinates` | Click at x,y coordinates |
 | `cdp_set_value` | Set input value with proper event dispatch |
 | `cdp_monaco_editor` | Interact with Monaco/VS Code editors |
+| `cdp_upload_shadow` | Upload files to shadow DOM file inputs |
 
 ### Site Memory Tools
 
@@ -150,7 +151,7 @@ No Playwright. No Puppeteer. Just raw CDP over WebSocket.
 
 ## Design Philosophy
 
-- **10 tools, not 30** - Everything an agent needs, nothing it doesn't
+- **Focused tool set** - Everything an agent needs for browser automation
 - **CSS selectors** - Universal, inspectable, copy-pasteable
 - **Verification by default** - Know if it worked without extra calls
 - **`cdp_execute` escape hatch** - When you need raw JS, it's there
