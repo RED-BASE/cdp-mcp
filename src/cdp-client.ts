@@ -688,19 +688,126 @@ export class CDPClient {
         (modifiers.shift ? 8 : 0) |
         (modifiers.alt ? 1 : 0);
 
+      // Key code mappings for proper CDP key events
+      const keyCodes: Record<string, { code: string; keyCode: number; text?: string }> = {
+        'Enter': { code: 'Enter', keyCode: 13, text: '\r' },
+        'Tab': { code: 'Tab', keyCode: 9 },
+        'Escape': { code: 'Escape', keyCode: 27 },
+        'Backspace': { code: 'Backspace', keyCode: 8 },
+        'Delete': { code: 'Delete', keyCode: 46 },
+        'ArrowUp': { code: 'ArrowUp', keyCode: 38 },
+        'ArrowDown': { code: 'ArrowDown', keyCode: 40 },
+        'ArrowLeft': { code: 'ArrowLeft', keyCode: 37 },
+        'ArrowRight': { code: 'ArrowRight', keyCode: 39 },
+        'Space': { code: 'Space', keyCode: 32, text: ' ' },
+      };
+
+      const keyInfo = keyCodes[key] || { code: key, keyCode: 0 };
+
+      // keyDown event
       await this.send('Input.dispatchKeyEvent', {
         type: 'keyDown',
         key,
+        code: keyInfo.code,
+        windowsVirtualKeyCode: keyInfo.keyCode,
+        nativeVirtualKeyCode: keyInfo.keyCode,
         modifiers: modifierFlags,
       });
+
+      // For Enter and Space, also send char event (important for form submission)
+      if (keyInfo.text) {
+        await this.send('Input.dispatchKeyEvent', {
+          type: 'char',
+          key,
+          code: keyInfo.code,
+          text: keyInfo.text,
+          unmodifiedText: keyInfo.text,
+          windowsVirtualKeyCode: keyInfo.keyCode,
+          nativeVirtualKeyCode: keyInfo.keyCode,
+          modifiers: modifierFlags,
+        });
+      }
+
+      // keyUp event
       await this.send('Input.dispatchKeyEvent', {
         type: 'keyUp',
         key,
+        code: keyInfo.code,
+        windowsVirtualKeyCode: keyInfo.keyCode,
+        nativeVirtualKeyCode: keyInfo.keyCode,
         modifiers: modifierFlags,
       });
+
       return true;
     } catch (e) {
       return false;
+    }
+  }
+
+  // Submit a form - tries multiple approaches for React/Vue/Angular compatibility
+  async submitForm(selector?: string): Promise<{ success: boolean; method?: string; error?: string }> {
+    const script = `
+      (() => {
+        let form = null;
+        const selector = ${selector ? JSON.stringify(selector) : 'null'};
+
+        if (selector) {
+          form = document.querySelector(selector);
+          if (!form) return { success: false, error: 'Form not found: ' + selector };
+        } else {
+          // Find form from currently focused element
+          const focused = document.activeElement;
+          if (focused) {
+            form = focused.closest('form');
+          }
+          if (!form) {
+            // Try to find any form on the page
+            form = document.querySelector('form');
+          }
+        }
+
+        if (!form) {
+          return { success: false, error: 'No form found' };
+        }
+
+        // Method 1: requestSubmit() - triggers validation and submit event (best for React)
+        if (typeof form.requestSubmit === 'function') {
+          try {
+            form.requestSubmit();
+            return { success: true, method: 'requestSubmit' };
+          } catch (e) {
+            // Continue to next method
+          }
+        }
+
+        // Method 2: Find and click submit button
+        const submitBtn = form.querySelector('button[type="submit"], input[type="submit"], button:not([type])');
+        if (submitBtn) {
+          submitBtn.click();
+          return { success: true, method: 'submitButtonClick' };
+        }
+
+        // Method 3: Dispatch submit event
+        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        const dispatched = form.dispatchEvent(submitEvent);
+        if (dispatched) {
+          return { success: true, method: 'dispatchSubmitEvent' };
+        }
+
+        // Method 4: Direct submit() call (doesn't trigger submit event handlers)
+        try {
+          form.submit();
+          return { success: true, method: 'directSubmit' };
+        } catch (e) {
+          return { success: false, error: 'All submission methods failed' };
+        }
+      })()
+    `;
+
+    try {
+      return await this.evaluate(script);
+    } catch (e) {
+      return { success: false, error: String(e) };
     }
   }
 

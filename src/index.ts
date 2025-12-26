@@ -292,6 +292,16 @@ const tools: Tool[] = [
       required: ['action'],
     },
   },
+  {
+    name: 'cdp_submit_form',
+    description: 'Submit a form reliably, with special handling for React/Vue/Angular. Tries multiple submission methods: requestSubmit(), clicking submit button, dispatching submit event, and direct submit(). Works when Enter key fails.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector for the form. If omitted, finds form from focused element or first form on page.' },
+      },
+    },
+  },
   // Site Memory Tools
   {
     name: 'cdp_site_scan',
@@ -1155,14 +1165,28 @@ async function handleTool(name: string, args: any): Promise<any> {
           success = await client.insertText(text);
         }
 
+        let enterResult: any = null;
         if (press_enter) {
+          // Try CDP Enter key first (improved with proper key codes)
           await client.pressKey('Enter');
+
+          // Also try submitForm as fallback for React forms
+          // Small delay to let Enter key take effect first
+          await new Promise(r => setTimeout(r, 50));
+          enterResult = await client.submitForm();
         }
         if (press_tab) {
           await client.pressKey('Tab');
         }
 
-        return { success, text, delay, pressed_enter: press_enter, pressed_tab: press_tab };
+        return {
+          success,
+          text,
+          delay,
+          pressed_enter: press_enter,
+          pressed_tab: press_tab,
+          form_submit: enterResult,
+        };
       } catch (error) {
         return { error: String(error) };
       }
@@ -1300,6 +1324,19 @@ async function handleTool(name: string, args: any): Promise<any> {
 
       try {
         const result = await client.monacoEditor(action, value, editor_index);
+        return result;
+      } catch (error) {
+        return { error: String(error) };
+      }
+    }
+
+    case 'cdp_submit_form': {
+      if (!client) {
+        return { error: 'Not connected. Use cdp_launch or cdp_connect first.' };
+      }
+
+      try {
+        const result = await client.submitForm(args.selector);
         return result;
       } catch (error) {
         return { error: String(error) };

@@ -59,6 +59,7 @@ Then either:
 | `cdp_set_value` | Set input value with proper event dispatch |
 | `cdp_monaco_editor` | Interact with Monaco/VS Code editors |
 | `cdp_upload_shadow` | Upload files to shadow DOM file inputs |
+| `cdp_submit_form` | **Submit forms reliably (React/Vue/Angular compatible)** |
 
 ### Site Memory Tools
 
